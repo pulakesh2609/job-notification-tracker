@@ -13,6 +13,7 @@
   var hamburger;
   var navLinksContainer;
   var savedJobs = new Set();
+  var jobStatuses = {}; // { id: { status: 'Applied', date: '...' } }
 
   // Search State
   var currentFilters = {
@@ -20,6 +21,7 @@
     location: 'Any',
     mode: 'Any',
     experience: 'Any',
+    status: 'All',
     sort: 'Latest',
     showMatchesOnly: false
   };
@@ -59,6 +61,9 @@
 
       var prefs = JSON.parse(localStorage.getItem('jobTrackerPreferences'));
       if (prefs) preferences = prefs;
+
+      var statuses = JSON.parse(localStorage.getItem('jobTrackerStatus'));
+      if (statuses) jobStatuses = statuses;
     } catch (e) {
       console.error('Failed to load data', e);
     }
@@ -88,40 +93,68 @@
   }
 
   function getTodayDateString() {
-    var today = new Date();
-    return today.toISOString().split('T')[0]; // YYYY-MM-DD
+    return new Date().toISOString().split('T')[0];
+  }
+
+  /* ── Status & Notifications ────────────────────────────── */
+
+  function showToast(message) {
+    var container = document.getElementById('toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toast-container';
+      container.className = 'toast-container';
+      document.body.appendChild(container);
+    }
+
+    var toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = '<span>' + icons.check + '</span> ' + message;
+
+    container.appendChild(toast);
+
+    setTimeout(function () {
+      toast.style.animation = 'toastFadeOut 0.3s forwards';
+      setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+    }, 3000);
+  }
+
+  function updateJobStatus(id, newStatus, selectElement) {
+    // Update State
+    jobStatuses[id] = { status: newStatus, date: new Date().toISOString() };
+    localStorage.setItem('jobTrackerStatus', JSON.stringify(jobStatuses));
+
+    // UI Feedback
+    if (selectElement) {
+      selectElement.className = 'status-select status-select--' + newStatus.toLowerCase().replace(' ', '-');
+    }
+
+    if (newStatus !== 'Not Applied') {
+      showToast('Status updated: ' + newStatus);
+    }
+  }
+
+  function getJobStatus(id) {
+    return jobStatuses[id] ? jobStatuses[id].status : 'Not Applied';
   }
 
   /* ── Match Score Analysis ──────────────────────────────── */
 
   function calculateMatchScore(job) {
     if (!preferences.roleKeywords.length && !preferences.skills.length) return 0;
-
     var score = 0;
-
     var titleLower = job.title.toLowerCase();
-    var hasTitleMatch = preferences.roleKeywords.some(function (kw) { return titleLower.includes(kw.toLowerCase()); });
-    if (hasTitleMatch) score += 25;
-
+    if (preferences.roleKeywords.some(function (kw) { return titleLower.includes(kw.toLowerCase()); })) score += 25;
     var descLower = job.description.toLowerCase();
-    var hasDescMatch = preferences.roleKeywords.some(function (kw) { return descLower.includes(kw.toLowerCase()); });
-    if (hasDescMatch) score += 15;
-
-    var hasLocMatch = preferences.locations.some(function (loc) { return job.location.includes(loc); });
-    if (hasLocMatch) score += 15;
-
+    if (preferences.roleKeywords.some(function (kw) { return descLower.includes(kw.toLowerCase()); })) score += 15;
+    if (preferences.locations.some(function (loc) { return job.location.includes(loc); })) score += 15;
     if (preferences.modes.includes(job.mode)) score += 10;
-
     if (job.experience === preferences.experience) score += 10;
     else if (preferences.experience === '0-2 Years' && (job.experience === 'Fresher' || job.experience.includes('0-') || job.experience.includes('1-'))) score += 5;
-
     var jobSkills = job.skills.map(function (s) { return s.toLowerCase(); });
-    var hasSkillMatch = preferences.skills.some(function (s) { return jobSkills.includes(s.toLowerCase()); });
-    if (hasSkillMatch) score += 15;
-
+    if (preferences.skills.some(function (s) { return jobSkills.includes(s.toLowerCase()); })) score += 15;
     if (job.postedDaysAgo <= 2) score += 5;
     if (job.source === 'LinkedIn') score += 5;
-
     return Math.min(score, 100);
   }
 
@@ -135,35 +168,24 @@
   /* ── Digest Logic ──────────────────────────────────────── */
 
   function loadDigest() {
-    var date = getTodayDateString();
-    var key = 'jobTrackerDigest_' + date;
+    var key = 'jobTrackerDigest_' + getTodayDateString();
     var data = localStorage.getItem(key);
     return data ? JSON.parse(data) : null;
   }
 
   function generateDigest() {
     if (!window.JOB_DATA) return [];
-
     var jobsWithScores = window.JOB_DATA.map(function (job) {
       job.score = calculateMatchScore(job);
       return job;
     });
-
-    // Valid matches only
     var matches = jobsWithScores.filter(function (j) { return j.score > 0; });
-
-    // Sort: Score DESC, then Freshness ASC
     matches.sort(function (a, b) {
       if (b.score !== a.score) return b.score - a.score;
       return a.postedDaysAgo - b.postedDaysAgo;
     });
-
     var top10 = matches.slice(0, 10);
-
-    // Save
-    var date = getTodayDateString();
-    localStorage.setItem('jobTrackerDigest_' + date, JSON.stringify(top10));
-
+    localStorage.setItem('jobTrackerDigest_' + getTodayDateString(), JSON.stringify(top10));
     return top10;
   }
 
@@ -172,14 +194,11 @@
     var text = "Daily Job Digest — " + date + "\n\n";
     digest.forEach(function (job, i) {
       text += (i + 1) + ". [" + job.score + "% Match] " + job.title + " at " + job.company + "\n";
-      text += "   Location: " + job.location + " (" + job.mode + ")\n";
-      text += "   Apply: " + job.applyUrl + "\n\n";
+      text += "   Location: " + job.location + " (" + job.mode + ")\n   Apply: " + job.applyUrl + "\n\n";
     });
     text += "Generated by Job Notification Tracker";
     return text;
   }
-
-  /* ── Salary Parsing ────────────────────────────────────── */
 
   function parseSalary(salaryStr) {
     if (!salaryStr) return 0;
@@ -197,7 +216,6 @@
 
   function filterJobs() {
     if (!window.JOB_DATA) return [];
-
     var term = currentFilters.search.toLowerCase();
     var jobsWithScores = window.JOB_DATA.map(function (job) {
       job.score = calculateMatchScore(job);
@@ -210,16 +228,17 @@
         var text = (job.title + ' ' + job.company + ' ' + (job.skills || []).join(' ')).toLowerCase();
         matchesSearch = text.indexOf(term) !== -1;
       }
-
       var matchesLoc = currentFilters.location === 'Any' || job.location.includes(currentFilters.location);
       var matchesMode = currentFilters.mode === 'Any' || job.mode === currentFilters.mode;
       var matchesExp = currentFilters.experience === 'Any' ||
         (currentFilters.experience === 'Fresher' && job.experience === 'Fresher') ||
         (currentFilters.experience === '0-2 Years' && (job.experience === 'Fresher' || job.experience.startsWith('0') || job.experience.startsWith('1')));
-
       var matchesScore = !currentFilters.showMatchesOnly || job.score >= preferences.minMatchScore;
 
-      return matchesSearch && matchesLoc && matchesMode && matchesExp && matchesScore;
+      var status = getJobStatus(job.id);
+      var matchesStatus = currentFilters.status === 'All' || status === currentFilters.status;
+
+      return matchesSearch && matchesLoc && matchesMode && matchesExp && matchesScore && matchesStatus;
     });
 
     filtered.sort(function (a, b) {
@@ -228,7 +247,6 @@
       else if (currentFilters.sort === 'Salary') return parseSalary(b.salaryRange) - parseSalary(a.salaryRange);
       return 0;
     });
-
     return filtered;
   }
 
@@ -237,6 +255,7 @@
     var locSelect = document.getElementById('filter-loc');
     var modeSelect = document.getElementById('filter-mode');
     var expSelect = document.getElementById('filter-exp');
+    var statusSelect = document.getElementById('filter-status');
     var sortSelect = document.getElementById('filter-sort');
     var matchToggle = document.getElementById('match-toggle');
 
@@ -244,17 +263,16 @@
     if (locSelect) currentFilters.location = locSelect.value;
     if (modeSelect) currentFilters.mode = modeSelect.value;
     if (expSelect) currentFilters.experience = expSelect.value;
+    if (statusSelect) currentFilters.status = statusSelect.value;
     if (sortSelect) currentFilters.sort = sortSelect.value;
     if (matchToggle) currentFilters.showMatchesOnly = matchToggle.checked;
 
     var jobContainer = document.getElementById('job-list-container');
     if (jobContainer) {
       var filtered = filterJobs();
-      if (filtered.length === 0) {
-        jobContainer.innerHTML = '<div class="state-empty" style="grid-column: 1/-1"><h3 class="state-empty__title">No jobs found.</h3><p class="state-empty__message">Try adjusting your filters or lowering your match threshold.</p></div>';
-      } else {
-        jobContainer.innerHTML = filtered.map(renderJobCard).join('');
-      }
+      jobContainer.innerHTML = filtered.length === 0
+        ? '<div class="state-empty" style="grid-column: 1/-1"><h3 class="state-empty__title">No jobs found.</h3><p class="state-empty__message">Try adjusting your filters.</p></div>'
+        : filtered.map(renderJobCard).join('');
     }
   }
 
@@ -268,30 +286,32 @@
     var scoreClass = getScoreBadgeClass(job.score);
     var scoreBadge = job.score > 0 ? '<span class="badge ' + scoreClass + '">Match: ' + job.score + '%</span>' : '<span class="badge badge--neutral">No Match</span>';
 
+    var status = getJobStatus(job.id);
+    var statusClass = 'status-select--' + status.toLowerCase().replace(' ', '-');
+
     return (
       '<article class="job-card" data-id="' + job.id + '">' +
       '<div class="job-card__header">' +
-      '<div>' +
-      '<h3 class="job-card__title">' + job.title + '</h3>' +
-      '<div class="job-card__company">' + job.company + '</div>' +
-      '</div>' +
+      '<div><h3 class="job-card__title">' + job.title + '</h3><div class="job-card__company">' + job.company + '</div></div>' +
       '<span class="badge badge--neutral">' + job.postedDaysAgo + 'd ago</span>' +
       '</div>' +
-
       '<div class="job-card__meta">' +
       '<span>' + icons.location + ' ' + job.location + ' (' + job.mode + ')</span>' +
       '<span>' + icons.briefcase + ' ' + job.experience + '</span>' +
       '</div>' +
-
       '<div class="job-card__tags">' +
-      '<span class="badge badge--neutral">' + icons.money + ' ' + job.salaryRange + '</span>' +
-      scoreBadge +
+      '<span class="badge badge--neutral">' + icons.money + ' ' + job.salaryRange + '</span>' + scoreBadge +
       '</div>' +
-
       '<div class="job-card__actions">' +
-      '<button class="btn btn--ghost btn--sm action-view" data-id="' + job.id + '">View Details</button>' +
+      '<button class="btn btn--ghost btn--sm action-view" data-id="' + job.id + '">View</button>' +
       '<button class="btn ' + saveBtnClass + ' btn--sm action-save" data-id="' + job.id + '">' + saveBtnText + '</button>' +
-      '<a href="' + job.applyUrl + '" target="_blank" class="btn btn--ghost btn--sm">Apply ' + icons.external + '</a>' +
+      '<select class="status-select ' + statusClass + ' action-status" data-id="' + job.id + '">' +
+      '<option value="Not Applied" ' + (status === 'Not Applied' ? 'selected' : '') + '>Not Applied</option>' +
+      '<option value="Applied" ' + (status === 'Applied' ? 'selected' : '') + '>Applied</option>' +
+      '<option value="Rejected" ' + (status === 'Rejected' ? 'selected' : '') + '>Rejected</option>' +
+      '<option value="Selected" ' + (status === 'Selected' ? 'selected' : '') + '>Selected</option>' +
+      '</select>' +
+      '<a href="' + job.applyUrl + '" target="_blank" class="btn btn--ghost btn--sm">' + icons.external + '</a>' +
       '</div>' +
       '</article>'
     );
@@ -300,32 +320,39 @@
   function renderFilterBar() {
     return (
       '<div class="filter-bar">' +
-      '<input type="text" id="search-input" class="input filter-bar__search" placeholder="Search role, company or skills..." value="' + currentFilters.search + '">' +
-
+      '<input type="text" id="search-input" class="input filter-bar__search" placeholder="Search..." value="' + currentFilters.search + '">' +
+      // Existing filters...
       '<select id="filter-loc" class="input filter-bar__select">' +
-      '<option value="Any" ' + (currentFilters.location === 'Any' ? 'selected' : '') + '>Location: Any</option>' +
+      '<option value="Any" ' + (currentFilters.location === 'Any' ? 'selected' : '') + '>Loc: Any</option>' +
       '<option value="Bangalore" ' + (currentFilters.location === 'Bangalore' ? 'selected' : '') + '>Bangalore</option>' +
       '<option value="Remote" ' + (currentFilters.location === 'Remote' ? 'selected' : '') + '>Remote</option>' +
       '<option value="Hyderabad" ' + (currentFilters.location === 'Hyderabad' ? 'selected' : '') + '>Hyderabad</option>' +
       '</select>' +
-
       '<select id="filter-mode" class="input filter-bar__select">' +
       '<option value="Any" ' + (currentFilters.mode === 'Any' ? 'selected' : '') + '>Mode: Any</option>' +
       '<option value="Remote" ' + (currentFilters.mode === 'Remote' ? 'selected' : '') + '>Remote</option>' +
       '<option value="Hybrid" ' + (currentFilters.mode === 'Hybrid' ? 'selected' : '') + '>Hybrid</option>' +
       '<option value="Onsite" ' + (currentFilters.mode === 'Onsite' ? 'selected' : '') + '>Onsite</option>' +
       '</select>' +
-
       '<select id="filter-exp" class="input filter-bar__select">' +
       '<option value="Any" ' + (currentFilters.experience === 'Any' ? 'selected' : '') + '>Exp: Any</option>' +
       '<option value="Fresher" ' + (currentFilters.experience === 'Fresher' ? 'selected' : '') + '>Fresher</option>' +
       '<option value="0-2 Years" ' + (currentFilters.experience === '0-2 Years' ? 'selected' : '') + '>0-2 Years</option>' +
       '</select>' +
 
+      // New Status Filter
+      '<select id="filter-status" class="input filter-bar__select">' +
+      '<option value="All" ' + (currentFilters.status === 'All' ? 'selected' : '') + '>Status: All</option>' +
+      '<option value="Not Applied" ' + (currentFilters.status === 'Not Applied' ? 'selected' : '') + '>Not Applied</option>' +
+      '<option value="Applied" ' + (currentFilters.status === 'Applied' ? 'selected' : '') + '>Applied</option>' +
+      '<option value="Rejected" ' + (currentFilters.status === 'Rejected' ? 'selected' : '') + '>Rejected</option>' +
+      '<option value="Selected" ' + (currentFilters.status === 'Selected' ? 'selected' : '') + '>Selected</option>' +
+      '</select>' +
+
       '<select id="filter-sort" class="input filter-bar__select">' +
       '<option value="Latest" ' + (currentFilters.sort === 'Latest' ? 'selected' : '') + '>Sort: Latest</option>' +
       '<option value="Match Score" ' + (currentFilters.sort === 'Match Score' ? 'selected' : '') + '>Match Score</option>' +
-      '<option value="Salary" ' + (currentFilters.sort === 'Salary' ? 'selected' : '') + '>Salary (High-Low)</option>' +
+      '<option value="Salary" ' + (currentFilters.sort === 'Salary' ? 'selected' : '') + '>Salary</option>' +
       '</select>' +
       '</div>' +
 
@@ -339,127 +366,26 @@
     );
   }
 
-  /* ── Page Renderers ────────────────────────────────────── */
-
+  // Page Renderers (Landing, Settings same as before)
   function renderLanding() {
     app.className = 'route-container route-container--centered';
-    app.innerHTML =
-      '<section class="landing-hero">' +
-      '<h1 class="landing-hero__headline">Stop Missing The Right Jobs.</h1>' +
-      '<p class="landing-hero__subtext">Precision-matched job discovery delivered daily at 9AM.</p>' +
-      '<a href="#/dashboard" class="btn btn--primary landing-hero__cta">Start Tracking</a>' +
-      '</section>';
+    app.innerHTML = '<section class="landing-hero"><h1 class="landing-hero__headline">Stop Missing The Right Jobs.</h1><p class="landing-hero__subtext">Precision-matched job discovery delivered daily at 9AM.</p><a href="#/dashboard" class="btn btn--primary landing-hero__cta">Start Tracking</a></section>';
     document.title = 'Job Notification Tracker — KodNest';
   }
 
   function renderDashboard() {
     app.className = 'route-container route-container--top';
-
     var filteredJobs = filterJobs();
-    var jobsHtml = filteredJobs.length > 0
-      ? filteredJobs.map(renderJobCard).join('')
-      : '<div class="state-empty" style="grid-column: 1/-1"><h3 class="state-empty__title">No jobs found.</h3><p class="state-empty__message">Try adjusting your filters.</p></div>';
-
+    var jobsHtml = filteredJobs.length > 0 ? filteredJobs.map(renderJobCard).join('') : '<div class="state-empty" style="grid-column: 1/-1"><h3 class="state-empty__title">No jobs found.</h3><p class="state-empty__message">Try adjusting your filters.</p></div>';
     var banner = '';
-    if (preferences.roleKeywords.length === 0 && preferences.skills.length === 0) {
-      banner = '<div style="background:#fef3c7; color:#92400e; padding:12px; margin-bottom:16px; border-radius:6px; font-weight:500; text-align:center;">' +
-        '⚠️ Set your <a href="#/settings" style="text-decoration:underline;">preferences</a> to activate intelligent matching.' +
-        '</div>';
-    }
+    if (preferences.roleKeywords.length === 0 && preferences.skills.length === 0) banner = '<div style="background:#fef3c7; color:#92400e; padding:12px; margin-bottom:16px; border-radius:6px; font-weight:500; text-align:center;">⚠️ Set your <a href="#/settings" style="text-decoration:underline;">preferences</a> to activate intelligent matching.</div>';
 
-    app.innerHTML =
-      '<div class="page-section">' +
-      '<div class="page-section__header">' +
-      '<h2 class="page-section__title">Dashboard</h2>' +
-      '<p class="page-section__desc">Browse and track new opportunities.</p>' +
-      '</div>' +
-      banner +
-      renderFilterBar() +
-      '<div id="job-list-container" class="job-grid">' +
-      jobsHtml +
-      '</div>' +
-      '</div>';
-
+    app.innerHTML = '<div class="page-section"><div class="page-section__header"><h2 class="page-section__title">Dashboard</h2><p class="page-section__desc">Browse and track new opportunities.</p></div>' + banner + renderFilterBar() + '<div id="job-list-container" class="job-grid">' + jobsHtml + '</div></div>';
     document.title = 'Dashboard — Job Notification Tracker';
   }
 
-  function renderDigest() {
-    app.className = 'route-container route-container--top';
-
-    // Check if preferences set
-    if (preferences.roleKeywords.length === 0 && preferences.skills.length === 0) {
-      app.innerHTML = '<div class="page-section"><div class="page-section__header"><h2 class="page-section__title">Daily Digest</h2></div><div class="state-empty"><h3 class="state-empty__title">Preferences Not Set</h3><p class="state-empty__message">Customize your settings to enable personalized Daily Digests.</p><a href="#/settings" class="btn btn--primary">Go to Settings</a></div></div>';
-      return;
-    }
-
-    var digest = loadDigest();
-
-    // UI If Digest Exists
-    if (digest) {
-      var dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-      var listHtml = digest.map(function (job, i) {
-        var scoreClass = getScoreBadgeClass(job.score);
-        return (
-          '<div class="digest-item">' +
-          '<div class="digest-item__main">' +
-          '<div class="digest-item__title">' + (i + 1) + '. ' + job.title + '</div>' +
-          '<div class="digest-item__company">' + job.company + ' • ' + job.location + '</div>' +
-          '</div>' +
-          '<div class="digest-item__score">' +
-          '<span class="badge ' + scoreClass + '">' + job.score + '% Match</span>' +
-          '</div>' +
-          '<a href="' + job.applyUrl + '" target="_blank" style="margin-left:16px; font-size:14px; font-weight:600; color:var(--color-primary);">Apply</a>' +
-          '</div>'
-        );
-      }).join('');
-
-      app.innerHTML =
-        '<div class="page-section">' +
-        '<div class="digest-container">' +
-        '<div class="digest-header">' +
-        '<div class="digest-date">' + dateStr + '</div>' +
-        '<div class="digest-title">Daily Job Brief</div>' +
-        '</div>' +
-        '<div class="digest-body">' + listHtml + '</div>' +
-        '<div class="digest-footer">Generated based on your preferences.</div>' +
-        '</div>' +
-        '<div class="digest-actions">' +
-        '<button id="btn-copy-digest" class="btn btn--secondary">' + icons.copy + ' Copy Text</button>' +
-        '<button id="btn-email-digest" class="btn btn--secondary">' + icons.mail + ' Email Draft</button>' +
-        '</div>' +
-        '</div>';
-
-      return;
-    }
-
-    // UI If Ready to Generate
-    app.innerHTML =
-      '<div class="page-section">' +
-      '<div class="page-section__header"><h2 class="page-section__title">Daily Digest</h2><p class="page-section__desc">A curated summary delivered every morning.</p></div>' +
-      '<div class="state-empty">' +
-      icons.clock +
-      '<h3 class="state-empty__title">Your 9AM Digest is ready.</h3>' +
-      '<p class="state-empty__message">Generate your personalized report for today.</p>' +
-      '<button id="btn-generate-digest" class="btn btn--primary" style="margin-top:16px;">Generate Digest (Simulated)</button>' +
-      '</div>' +
-      '<p style="text-align:center; margin-top:16px; font-size:12px; color:var(--color-text-secondary);">Demo Mode: Daily trigger simulated manually.</p>' +
-      '</div>';
-  }
-
-  function renderSaved() {
-    app.className = 'route-container route-container--top';
-    var savedList = window.JOB_DATA.filter(function (job) { return savedJobs.has(job.id); });
-    savedList.forEach(function (job) { job.score = calculateMatchScore(job); });
-
-    var contentHtml = savedList.length > 0
-      ? '<div class="job-grid">' + savedList.map(renderJobCard).join('') + '</div>'
-      : '<div class="state-empty"><h3 class="state-empty__title">No saved jobs.</h3></div>';
-
-    app.innerHTML = '<div class="page-section"><div class="page-section__header"><h2 class="page-section__title">Saved Jobs</h2></div>' + contentHtml + '</div>';
-    document.title = 'Saved — Job Notification Tracker';
-  }
-
   function renderSettings() {
+    // Same renderSettings as before
     app.className = 'route-container route-container--top';
     var roleVal = preferences.roleKeywords.join(', ');
     var locVal = preferences.locations.join(', ');
@@ -469,43 +395,100 @@
     var isOnsite = preferences.modes.includes('Onsite') ? 'checked' : '';
 
     app.innerHTML =
-      '<div class="page-section">' +
-      '<div class="page-section__header"><h2 class="page-section__title">Settings</h2><p class="page-section__desc">Configure your job tracking preferences.</p></div>' +
-      '<div class="card settings-form">' +
+      '<div class="page-section"><div class="page-section__header"><h2 class="page-section__title">Settings</h2><p class="page-section__desc">Configure your job tracking preferences.</p></div><div class="card settings-form">' +
       '<div class="field"><label class="label">Role Keywords</label><input id="pref-roles" class="input" placeholder="e.g. Frontend, React" value="' + roleVal + '"></div>' +
       '<div class="field"><label class="label">Locations</label><input id="pref-locs" class="input" placeholder="e.g. Bangalore, Remote" value="' + locVal + '"></div>' +
       '<div class="field"><label class="label">Work Mode</label><div style="display:flex; gap:16px;"><label><input type="checkbox" class="pref-mode" value="Remote" ' + isRemote + '> Remote</label><label><input type="checkbox" class="pref-mode" value="Hybrid" ' + isHybrid + '> Hybrid</label><label><input type="checkbox" class="pref-mode" value="Onsite" ' + isOnsite + '> Onsite</label></div></div>' +
       '<div class="field"><label class="label">Experience</label><select id="pref-exp" class="input"><option value="Any">Any</option><option value="Fresher" ' + (preferences.experience === 'Fresher' ? 'selected' : '') + '>Fresher</option><option value="0-2 Years" ' + (preferences.experience === '0-2 Years' ? 'selected' : '') + '>0-2 Years</option></select></div>' +
       '<div class="field"><label class="label">Skills</label><input id="pref-skills" class="input" placeholder="e.g. Java, Python" value="' + skillVal + '"></div>' +
       '<div class="field"><label class="label" style="display:flex; justify-content:space-between;"><span>Minimum Match Score</span><span id="score-val" class="range-value">' + preferences.minMatchScore + '%</span></label><input type="range" id="pref-score" class="range-slider" min="0" max="100" value="' + preferences.minMatchScore + '"></div>' +
-      '<button id="save-prefs" class="btn btn--primary btn--block">Save Preferences</button>' +
-      '</div>' +
-      '</div>';
+      '<button id="save-prefs" class="btn btn--primary btn--block">Save Preferences</button></div></div>';
     document.title = 'Settings — Job Notification Tracker';
   }
 
   function handleSavePreferences() {
+    // Same as before
     var roles = document.getElementById('pref-roles').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     var locs = document.getElementById('pref-locs').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     var skills = document.getElementById('pref-skills').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     var exp = document.getElementById('pref-exp').value;
     var score = document.getElementById('pref-score').value;
-
     var modes = [];
     document.querySelectorAll('.pref-mode:checked').forEach(function (cb) { modes.push(cb.value); });
 
-    preferences = {
-      roleKeywords: roles,
-      locations: locs,
-      modes: modes,
-      experience: exp,
-      skills: skills,
-      minMatchScore: parseInt(score, 10)
-    };
-
+    preferences = { roleKeywords: roles, locations: locs, modes: modes, experience: exp, skills: skills, minMatchScore: parseInt(score, 10) };
     savePreferences();
     alert('Preferences saved!');
     window.location.hash = '#/dashboard';
+  }
+
+  function renderDigest() {
+    app.className = 'route-container route-container--top';
+    if (preferences.roleKeywords.length === 0 && preferences.skills.length === 0) {
+      app.innerHTML = '<div class="page-section"><div class="page-section__header"><h2 class="page-section__title">Daily Digest</h2></div><div class="state-empty"><h3 class="state-empty__title">Preferences Not Set</h3><p class="state-empty__message">Customize your settings to enable personalized Daily Digests.</p><a href="#/settings" class="btn btn--primary">Go to Settings</a></div></div>';
+      return;
+    }
+
+    var digest = loadDigest();
+
+    // Recent Status Updates Logic
+    var statusUpdatesHtml = '';
+    var statusKeys = Object.keys(jobStatuses);
+    if (statusKeys.length > 0) {
+      var recentStatuses = statusKeys.map(function (key) {
+        var job = window.JOB_DATA.find(function (j) { return j.id === key; });
+        return job ? { job: job, ...jobStatuses[key] } : null;
+      }).filter(Boolean).filter(function (item) {
+        return item.status !== 'Not Applied';
+      });
+
+      // Sort by date desc
+      recentStatuses.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+
+      if (recentStatuses.length > 0) {
+        statusUpdatesHtml = '<div class="digest-container" style="margin-bottom:24px;"><div class="digest-header" style="background:var(--color-bg);"><div class="digest-title" style="font-size:18px;">Recent Activity</div></div><div class="digest-body">' +
+          recentStatuses.slice(0, 5).map(function (item) {
+            var statusClass = 'status-select--' + item.status.toLowerCase().replace(' ', '-');
+            var since = Math.floor((new Date() - new Date(item.date)) / (1000 * 60 * 60)); // hours
+            var timeText = since < 24 ? since + 'h ago' : Math.floor(since / 24) + 'd ago';
+            return '<div class="digest-item"><div class="digest-item__main"><div class="digest-item__title">' + item.job.title + '</div><div class="digest-item__company">' + item.job.company + '</div></div><div class="digest-item__score"><span class="badge status-select ' + statusClass + '">' + item.status + '</span><div style="font-size:10px; color:var(--color-text-secondary); margin-top:4px;">' + timeText + '</div></div></div>';
+          }).join('') +
+          '</div></div>';
+      }
+    }
+
+    if (digest) {
+      var dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      var listHtml = digest.map(function (job, i) {
+        var scoreClass = getScoreBadgeClass(job.score);
+        return (
+          '<div class="digest-item">' +
+          '<div class="digest-item__main"><div class="digest-item__title">' + (i + 1) + '. ' + job.title + '</div><div class="digest-item__company">' + job.company + ' • ' + job.location + '</div></div>' +
+          '<div class="digest-item__score"><span class="badge ' + scoreClass + '">' + job.score + '% Match</span></div>' +
+          '<a href="' + job.applyUrl + '" target="_blank" style="margin-left:16px; font-size:14px; font-weight:600; color:var(--color-primary);">Apply</a>' +
+          '</div>'
+        );
+      }).join('');
+
+      app.innerHTML =
+        '<div class="page-section">' +
+        statusUpdatesHtml + // Prepend recent updates
+        '<div class="digest-container"><div class="digest-header"><div class="digest-date">' + dateStr + '</div><div class="digest-title">Daily Job Brief</div></div><div class="digest-body">' + listHtml + '</div><div class="digest-footer">Generated based on your preferences.</div></div>' +
+        '<div class="digest-actions"><button id="btn-copy-digest" class="btn btn--secondary">' + icons.copy + ' Copy Text</button><button id="btn-email-digest" class="btn btn--secondary">' + icons.mail + ' Email Draft</button></div>' +
+        '</div>';
+      return;
+    }
+
+    app.innerHTML = '<div class="page-section"><div class="page-section__header"><h2 class="page-section__title">Daily Digest</h2><p class="page-section__desc">A curated summary delivered every morning.</p></div>' + statusUpdatesHtml + '<div class="state-empty">' + icons.clock + '<h3 class="state-empty__title">Your 9AM Digest is ready.</h3><p class="state-empty__message">Generate your personalized report for today.</p><button id="btn-generate-digest" class="btn btn--primary" style="margin-top:16px;">Generate Digest (Simulated)</button></div><p style="text-align:center; margin-top:16px; font-size:12px; color:var(--color-text-secondary);">Demo Mode: Daily trigger simulated manually.</p></div>';
+  }
+
+  function renderSaved() {
+    app.className = 'route-container route-container--top';
+    var savedList = window.JOB_DATA.filter(function (job) { return savedJobs.has(job.id); });
+    savedList.forEach(function (job) { job.score = calculateMatchScore(job); });
+    var contentHtml = savedList.length > 0 ? '<div class="job-grid">' + savedList.map(renderJobCard).join('') + '</div>' : '<div class="state-empty"><h3 class="state-empty__title">No saved jobs.</h3></div>';
+    app.innerHTML = '<div class="page-section"><div class="page-section__header"><h2 class="page-section__title">Saved Jobs</h2></div>' + contentHtml + '</div>';
+    document.title = 'Saved — Job Notification Tracker';
   }
 
   function renderProof() {
@@ -514,21 +497,9 @@
   }
 
   /* ── Modal & Navigation ────────────────────────────────── */
-  // ... (Same modal logic)
   function openModal(job) {
-    modalRoot.innerHTML =
-      '<div class="modal-overlay" id="modal-overlay">' +
-      '<div class="modal">' +
-      '<div class="modal__header"><h3 class="modal__title">' + job.title + '</h3><button class="modal__close" id="modal-close">' + icons.close + '</button></div>' +
-      '<div class="modal__content">' +
-      '<div class="modal__section"><div class="modal__section-title">Company Info</div><p><strong>' + job.company + '</strong> • ' + job.location + ' (' + job.mode + ')</p><p>Posted ' + job.postedDaysAgo + ' days ago via ' + job.source + '</p></div>' +
-      '<div class="modal__section"><div class="modal__section-title">Job Description</div><p>' + job.description + '</p></div>' +
-      '<div class="modal__section"><div class="modal__section-title">Skills Required</div><div class="job-card__tags">' + job.skills.map(function (s) { return '<span class="badge badge--neutral">' + s + '</span>'; }).join('') + '</div></div>' +
-      '<div class="modal__section"><div class="modal__section-title">Details</div><p>Experience: ' + job.experience + '</p><p>Salary: ' + job.salaryRange + '</p></div>' +
-      '</div>' +
-      '<div class="modal__footer"><button class="btn btn--ghost" id="modal-close-btn">Close</button><a href="' + job.applyUrl + '" target="_blank" class="btn btn--primary">Apply Now ' + icons.external + '</a></div>' +
-      '</div>' +
-      '</div>';
+    // Same modal logic code (omitted for brevity, assume present)
+    modalRoot.innerHTML = '<div class="modal-overlay" id="modal-overlay"><div class="modal"><div class="modal__header"><h3 class="modal__title">' + job.title + '</h3><button class="modal__close" id="modal-close">' + icons.close + '</button></div><div class="modal__content"><div class="modal__section"><div class="modal__section-title">Company Info</div><p><strong>' + job.company + '</strong> • ' + job.location + ' (' + job.mode + ')</p><p>Posted ' + job.postedDaysAgo + ' days ago via ' + job.source + '</p></div><div class="modal__section"><div class="modal__section-title">Job Description</div><p>' + job.description + '</p></div><div class="modal__section"><div class="modal__section-title">Skills Required</div><div class="job-card__tags">' + job.skills.map(function (s) { return '<span class="badge badge--neutral">' + s + '</span>'; }).join('') + '</div></div><div class="modal__section"><div class="modal__section-title">Details</div><p>Experience: ' + job.experience + '</p><p>Salary: ' + job.salaryRange + '</p></div></div><div class="modal__footer"><button class="btn btn--ghost" id="modal-close-btn">Close</button><a href="' + job.applyUrl + '" target="_blank" class="btn btn--primary">Apply Now ' + icons.external + '</a></div></div></div>';
     document.getElementById('modal-close').onclick = closeModal;
     document.getElementById('modal-close-btn').onclick = closeModal;
     document.getElementById('modal-overlay').onclick = function (e) { if (e.target === this) closeModal(); };
@@ -536,22 +507,9 @@
   }
   function closeModal() { modalRoot.innerHTML = ''; document.body.style.overflow = ''; }
 
-  var routes = {
-    '/': { title: 'Home', render: renderLanding },
-    '/dashboard': { title: 'Dashboard', render: renderDashboard },
-    '/saved': { title: 'Saved', render: renderSaved },
-    '/digest': { title: 'Digest', render: renderDigest },
-    '/settings': { title: 'Settings', render: renderSettings },
-    '/proof': { title: 'Proof', render: renderProof }
-  };
+  var routes = { '/': { title: 'Home', render: renderLanding }, '/dashboard': { title: 'Dashboard', render: renderDashboard }, '/saved': { title: 'Saved', render: renderSaved }, '/digest': { title: 'Digest', render: renderDigest }, '/settings': { title: 'Settings', render: renderSettings }, '/proof': { title: 'Proof', render: renderProof } };
 
-  function updateActiveLink(hash) {
-    if (!navLinks) return;
-    for (var i = 0; i < navLinks.length; i++) {
-      navLinks[i].classList.toggle('nav__link--active', navLinks[i].getAttribute('data-route') === hash);
-    }
-  }
-
+  function updateActiveLink(hash) { if (!navLinks) return; for (var i = 0; i < navLinks.length; i++) { navLinks[i].classList.toggle('nav__link--active', navLinks[i].getAttribute('data-route') === hash); } }
   function navigate() {
     var hash = window.location.hash.replace('#', '') || '/';
     var route = routes[hash];
@@ -559,46 +517,31 @@
     if (modalRoot) modalRoot.innerHTML = '';
     route.render();
     updateActiveLink(hash);
-    if (navLinksContainer) {
-      navLinksContainer.classList.remove('nav__links--open');
-      if (hamburger) hamburger.setAttribute('aria-expanded', 'false');
-    }
+    if (navLinksContainer) { navLinksContainer.classList.remove('nav__links--open'); if (hamburger) hamburger.setAttribute('aria-expanded', 'false'); }
   }
 
   /* ── Event Delegation ──────────────────────────────────── */
 
   function handleAppClick(e) {
     var target = e.target;
-    if (target.classList.contains('action-view')) {
-      var id = target.getAttribute('data-id');
-      var job = window.JOB_DATA.find(function (j) { return j.id === id; });
-      if (job) openModal(job);
-    }
-    if (target.classList.contains('action-save')) {
-      var id = target.getAttribute('data-id');
-      toggleSaveJob(id, target);
-    }
+    if (target.classList.contains('action-view')) { var id = target.getAttribute('data-id'); var job = window.JOB_DATA.find(function (j) { return j.id === id; }); if (job) openModal(job); }
+    if (target.classList.contains('action-save')) { var id = target.getAttribute('data-id'); toggleSaveJob(id, target); }
     if (target.id === 'save-prefs') handleSavePreferences();
-
-    // Digest Actions
-    if (target.id === 'btn-generate-digest') {
-      var digest = generateDigest();
-      if (digest.length === 0) alert('No matches found for today based on your preferences.');
-      else renderDigest();
-    }
-    if (target.id === 'btn-copy-digest') {
-      var text = getDigestText(loadDigest());
-      navigator.clipboard.writeText(text).then(function () { alert('Digest copied to clipboard!'); });
-    }
-    if (target.id === 'btn-email-digest') {
-      var text = getDigestText(loadDigest());
-      window.open('mailto:?subject=Daily Job Digest&body=' + encodeURIComponent(text));
-    }
+    if (target.id === 'btn-generate-digest') { var digest = generateDigest(); if (digest.length === 0) alert('No matches found for today.'); else renderDigest(); }
+    if (target.id === 'btn-copy-digest') { var text = getDigestText(loadDigest()); navigator.clipboard.writeText(text).then(function () { alert('Digest copied!'); }); }
+    if (target.id === 'btn-email-digest') { var text = getDigestText(loadDigest()); window.open('mailto:?subject=Daily Job Digest&body=' + encodeURIComponent(text)); }
   }
 
   function handleAppChange(e) {
     if (e.target.id === 'pref-score') document.getElementById('score-val').textContent = e.target.value + '%';
     if (e.target.classList.contains('filter-bar__select') || e.target.id === 'match-toggle') handleSearchInput();
+
+    // Status Change
+    if (e.target.classList.contains('action-status')) {
+      var id = e.target.getAttribute('data-id');
+      var newStatus = e.target.value;
+      updateJobStatus(id, newStatus, e.target);
+    }
   }
 
   function handleAppInput(e) { if (e.target.id === 'search-input') handleSearchInput(); }
@@ -609,20 +552,11 @@
     navLinks = document.querySelectorAll('.nav__link');
     hamburger = document.getElementById('nav-hamburger');
     navLinksContainer = document.getElementById('nav-links');
-
     loadData();
-
-    if (hamburger && navLinksContainer) {
-      hamburger.addEventListener('click', function () {
-        var isOpen = navLinksContainer.classList.toggle('nav__links--open');
-        hamburger.setAttribute('aria-expanded', isOpen);
-      });
-    }
-
+    if (hamburger && navLinksContainer) { hamburger.addEventListener('click', function () { var isOpen = navLinksContainer.classList.toggle('nav__links--open'); hamburger.setAttribute('aria-expanded', isOpen); }); }
     app.addEventListener('click', handleAppClick);
     app.addEventListener('change', handleAppChange);
     app.addEventListener('input', handleAppInput);
-
     window.addEventListener('hashchange', navigate);
     navigate();
   });
