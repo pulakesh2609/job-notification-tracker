@@ -575,3 +575,89 @@
         opacity: 1;
     }
 }
+
+/* ── Match Score Badges ──────────────────────────────────── */
+
+.badge--score-high {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.badge--score-med {
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.badge--score-low {
+    background-color: #f3f4f6;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+}
+
+.badge--score-none {
+    background-color: #f9fafb;
+    color: #9ca3af;
+    border: 1px solid #f3f4f6;
+}
+
+/* ── Toggle Switch ───────────────────────────────────────── */
+
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    cursor: pointer;
+    user-select: none;
+}
+
+.toggle-switch__input {
+    appearance: none;
+    width: 40px;
+    height: 24px;
+    background-color: var(--color-border);
+    border-radius: 999px;
+    position: relative;
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+
+.toggle-switch__input::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-switch__input:checked {
+    background-color: var(--color-accent);
+}
+
+.toggle-switch__input:checked::after {
+    transform: translateX(16px);
+}
+
+.toggle-switch__label {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+/* ── Range Slider ────────────────────────────────────────── */
+
+.range-slider {
+    width: 100%;
+    margin: var(--sp-2) 0;
+}
+
+.range-value {
+    font-weight: 700;
+    color: var(--color-accent);
+}
