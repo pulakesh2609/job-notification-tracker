@@ -821,3 +821,93 @@
         transform: translateY(-10px);
     }
 }
+
+/* ── Test Checklist ──────────────────────────────────────── */
+
+.checklist-header {
+    background-color: var(--color-surface);
+    padding: var(--sp-4);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.checklist-summary {
+    font-weight: 700;
+    font-size: var(--text-lg);
+}
+
+.checklist-summary--passing {
+    color: #166534;
+}
+
+.checklist-summary--failing {
+    color: #991b1b;
+}
+
+.checklist-item {
+    display: flex;
+    align-items: flex-start;
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 1px solid var(--color-border);
+    gap: var(--sp-3);
+    transition: background-color 0.2s;
+}
+
+.checklist-item:hover {
+    background-color: var(--color-surface);
+}
+
+.checklist-item:last-child {
+    border-bottom: none;
+}
+
+.checklist-checkbox {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    cursor: pointer;
+    accent-color: var(--color-primary);
+}
+
+.checklist-label {
+    font-weight: 500;
+    color: var(--color-text);
+    cursor: pointer;
+    flex: 1;
+}
+
+.checklist-tip {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    margin-top: 4px;
+    display: block;
+}
+
+/* ── Locked & Ship States ────────────────────────────────── */
+
+.locked-container {
+    text-align: center;
+    padding: var(--sp-8) var(--sp-4);
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.locked-icon {
+    font-size: 48px;
+    margin-bottom: var(--sp-4);
+    display: block;
+}
+
+.ship-container {
+    text-align: center;
+    padding: var(--sp-8) var(--sp-4);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.ship-hero {
+    font-size: 64px;
+    margin-bottom: var(--sp-4);
+}

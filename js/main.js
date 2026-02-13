@@ -13,7 +13,8 @@
   var hamburger;
   var navLinksContainer;
   var savedJobs = new Set();
-  var jobStatuses = {}; // { id: { status: 'Applied', date: '...' } }
+  var jobStatuses = {};
+  var testStatus = {}; // { 'id': boolean }
 
   // Search State
   var currentFilters = {
@@ -26,7 +27,7 @@
     showMatchesOnly: false
   };
 
-  // User Preferences (Default)
+  // User Preferences
   var preferences = {
     roleKeywords: [],
     locations: [],
@@ -35,6 +36,20 @@
     skills: [],
     minMatchScore: 40
   };
+
+  // Test Items
+  var testItems = [
+    { id: 't1', label: 'Preferences persist after refresh', tip: 'Reload page and check Settings.' },
+    { id: 't2', label: 'Match score calculates correctly', tip: 'Check a job card vs your settings.' },
+    { id: 't3', label: '"Show only matches" toggle works', tip: 'Toggle on Dashboard.' },
+    { id: 't4', label: 'Save job persists after refresh', tip: 'Save a job, reload, check Saved tab.' },
+    { id: 't5', label: 'Apply opens in new tab', tip: 'Click Apply button.' },
+    { id: 't6', label: 'Status update persists after refresh', tip: 'Change status, reload, check job.' },
+    { id: 't7', label: 'Status filter works correctly', tip: 'Filter by "Applied".' },
+    { id: 't8', label: 'Digest generates top 10 by score', tip: 'Generate digest and count items.' },
+    { id: 't9', label: 'Digest persists for the day', tip: 'Reload page after generating digest.' },
+    { id: 't10', label: 'No console errors on main pages', tip: 'Check Developer Console.' }
+  ];
 
   /* ── Icons ─────────────────────────────────────────────── */
 
@@ -49,7 +64,9 @@
     close: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
     search: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
     copy: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>',
-    mail: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>'
+    mail: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>',
+    lock: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>',
+    rocket: '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path></svg>'
   };
 
   /* ── Helper Functions ──────────────────────────────────── */
@@ -58,12 +75,12 @@
     try {
       var saved = JSON.parse(localStorage.getItem('savedJobs') || '[]');
       savedJobs = new Set(saved);
-
       var prefs = JSON.parse(localStorage.getItem('jobTrackerPreferences'));
       if (prefs) preferences = prefs;
-
       var statuses = JSON.parse(localStorage.getItem('jobTrackerStatus'));
       if (statuses) jobStatuses = statuses;
+      var tests = JSON.parse(localStorage.getItem('jobTrackerTestStatus'));
+      if (tests) testStatus = tests;
     } catch (e) {
       console.error('Failed to load data', e);
     }
@@ -71,6 +88,10 @@
 
   function savePreferences() {
     localStorage.setItem('jobTrackerPreferences', JSON.stringify(preferences));
+  }
+
+  function getTodayDateString() {
+    return new Date().toISOString().split('T')[0];
   }
 
   function toggleSaveJob(id, btnElement) {
@@ -88,12 +109,17 @@
       }
     }
     localStorage.setItem('savedJobs', JSON.stringify(Array.from(savedJobs)));
-
     if (window.location.hash === '#/saved') renderSaved();
   }
 
-  function getTodayDateString() {
-    return new Date().toISOString().split('T')[0];
+  function updateTestStatus(id, checked) {
+    testStatus[id] = checked;
+    localStorage.setItem('jobTrackerTestStatus', JSON.stringify(testStatus));
+    renderTestChecklist(); // Re-render to update summary
+  }
+
+  function checkAllTestsPassed() {
+    return testItems.every(function (t) { return testStatus[t.id]; });
   }
 
   /* ── Status & Notifications ────────────────────────────── */
@@ -106,13 +132,10 @@
       container.className = 'toast-container';
       document.body.appendChild(container);
     }
-
     var toast = document.createElement('div');
     toast.className = 'toast';
     toast.innerHTML = '<span>' + icons.check + '</span> ' + message;
-
     container.appendChild(toast);
-
     setTimeout(function () {
       toast.style.animation = 'toastFadeOut 0.3s forwards';
       setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
@@ -120,15 +143,11 @@
   }
 
   function updateJobStatus(id, newStatus, selectElement) {
-    // Update State
     jobStatuses[id] = { status: newStatus, date: new Date().toISOString() };
     localStorage.setItem('jobTrackerStatus', JSON.stringify(jobStatuses));
-
-    // UI Feedback
     if (selectElement) {
       selectElement.className = 'status-select status-select--' + newStatus.toLowerCase().replace(' ', '-');
     }
-
     if (newStatus !== 'Not Applied') {
       showToast('Status updated: ' + newStatus);
     }
@@ -234,7 +253,6 @@
         (currentFilters.experience === 'Fresher' && job.experience === 'Fresher') ||
         (currentFilters.experience === '0-2 Years' && (job.experience === 'Fresher' || job.experience.startsWith('0') || job.experience.startsWith('1')));
       var matchesScore = !currentFilters.showMatchesOnly || job.score >= preferences.minMatchScore;
-
       var status = getJobStatus(job.id);
       var matchesStatus = currentFilters.status === 'All' || status === currentFilters.status;
 
@@ -282,10 +300,8 @@
     var isSaved = savedJobs.has(job.id);
     var saveBtnClass = isSaved ? 'btn--primary' : 'btn--secondary';
     var saveBtnText = isSaved ? (icons.check + ' Saved') : (icons.save + ' Save');
-
     var scoreClass = getScoreBadgeClass(job.score);
     var scoreBadge = job.score > 0 ? '<span class="badge ' + scoreClass + '">Match: ' + job.score + '%</span>' : '<span class="badge badge--neutral">No Match</span>';
-
     var status = getJobStatus(job.id);
     var statusClass = 'status-select--' + status.toLowerCase().replace(' ', '-');
 
@@ -339,8 +355,6 @@
       '<option value="Fresher" ' + (currentFilters.experience === 'Fresher' ? 'selected' : '') + '>Fresher</option>' +
       '<option value="0-2 Years" ' + (currentFilters.experience === '0-2 Years' ? 'selected' : '') + '>0-2 Years</option>' +
       '</select>' +
-
-      // New Status Filter
       '<select id="filter-status" class="input filter-bar__select">' +
       '<option value="All" ' + (currentFilters.status === 'All' ? 'selected' : '') + '>Status: All</option>' +
       '<option value="Not Applied" ' + (currentFilters.status === 'Not Applied' ? 'selected' : '') + '>Not Applied</option>' +
@@ -348,7 +362,6 @@
       '<option value="Rejected" ' + (currentFilters.status === 'Rejected' ? 'selected' : '') + '>Rejected</option>' +
       '<option value="Selected" ' + (currentFilters.status === 'Selected' ? 'selected' : '') + '>Selected</option>' +
       '</select>' +
-
       '<select id="filter-sort" class="input filter-bar__select">' +
       '<option value="Latest" ' + (currentFilters.sort === 'Latest' ? 'selected' : '') + '>Sort: Latest</option>' +
       '<option value="Match Score" ' + (currentFilters.sort === 'Match Score' ? 'selected' : '') + '>Match Score</option>' +
@@ -366,7 +379,7 @@
     );
   }
 
-  // Page Renderers (Landing, Settings same as before)
+  // Page Renderers
   function renderLanding() {
     app.className = 'route-container route-container--centered';
     app.innerHTML = '<section class="landing-hero"><h1 class="landing-hero__headline">Stop Missing The Right Jobs.</h1><p class="landing-hero__subtext">Precision-matched job discovery delivered daily at 9AM.</p><a href="#/dashboard" class="btn btn--primary landing-hero__cta">Start Tracking</a></section>';
@@ -385,7 +398,6 @@
   }
 
   function renderSettings() {
-    // Same renderSettings as before
     app.className = 'route-container route-container--top';
     var roleVal = preferences.roleKeywords.join(', ');
     var locVal = preferences.locations.join(', ');
@@ -407,7 +419,6 @@
   }
 
   function handleSavePreferences() {
-    // Same as before
     var roles = document.getElementById('pref-roles').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     var locs = document.getElementById('pref-locs').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     var skills = document.getElementById('pref-skills').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
@@ -430,19 +441,13 @@
     }
 
     var digest = loadDigest();
-
-    // Recent Status Updates Logic
     var statusUpdatesHtml = '';
     var statusKeys = Object.keys(jobStatuses);
     if (statusKeys.length > 0) {
       var recentStatuses = statusKeys.map(function (key) {
         var job = window.JOB_DATA.find(function (j) { return j.id === key; });
         return job ? { job: job, ...jobStatuses[key] } : null;
-      }).filter(Boolean).filter(function (item) {
-        return item.status !== 'Not Applied';
-      });
-
-      // Sort by date desc
+      }).filter(Boolean).filter(function (item) { return item.status !== 'Not Applied'; });
       recentStatuses.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
 
       if (recentStatuses.length > 0) {
@@ -470,12 +475,7 @@
         );
       }).join('');
 
-      app.innerHTML =
-        '<div class="page-section">' +
-        statusUpdatesHtml + // Prepend recent updates
-        '<div class="digest-container"><div class="digest-header"><div class="digest-date">' + dateStr + '</div><div class="digest-title">Daily Job Brief</div></div><div class="digest-body">' + listHtml + '</div><div class="digest-footer">Generated based on your preferences.</div></div>' +
-        '<div class="digest-actions"><button id="btn-copy-digest" class="btn btn--secondary">' + icons.copy + ' Copy Text</button><button id="btn-email-digest" class="btn btn--secondary">' + icons.mail + ' Email Draft</button></div>' +
-        '</div>';
+      app.innerHTML = '<div class="page-section">' + statusUpdatesHtml + '<div class="digest-container"><div class="digest-header"><div class="digest-date">' + dateStr + '</div><div class="digest-title">Daily Job Brief</div></div><div class="digest-body">' + listHtml + '</div><div class="digest-footer">Generated based on your preferences.</div></div><div class="digest-actions"><button id="btn-copy-digest" class="btn btn--secondary">' + icons.copy + ' Copy Text</button><button id="btn-email-digest" class="btn btn--secondary">' + icons.mail + ' Email Draft</button></div></div>';
       return;
     }
 
@@ -496,9 +496,42 @@
     app.innerHTML = '<div class="page-section"><div class="page-section__header"><h2 class="page-section__title">Proof of Work</h2></div><div class="state-empty"><h3 class="state-empty__title">Artifacts</h3></div></div>';
   }
 
+  /* ── Test & Ship Logic ─────────────────────────────────── */
+
+  function renderTestChecklist() {
+    app.className = 'route-container route-container--top';
+    var passedCount = Object.values(testStatus).filter(Boolean).length;
+    var summaryClass = passedCount === 10 ? 'checklist-summary--passing' : 'checklist-summary--failing';
+    var summaryText = passedCount === 10 ? 'All Systems Go' : 'Resolve all issues before shipping.';
+
+    var itemsHtml = testItems.map(function (test) {
+      var isChecked = testStatus[test.id] ? 'checked' : '';
+      return '<div class="checklist-item"><input type="checkbox" class="checklist-checkbox" id="' + test.id + '" ' + isChecked + '><div class="checklist-label"><label for="' + test.id + '">' + test.label + '</label><span class="checklist-tip">' + test.tip + '</span></div></div>';
+    }).join('');
+
+    app.innerHTML =
+      '<div class="page-section">' +
+      '<div class="page-section__header"><h2 class="page-section__title">Pre-Flight Checklist</h2><p class="page-section__desc">Verify system integrity.</p></div>' +
+      '<div class="checklist-container" style="max-width:600px; margin:0 auto; background:white; border:1px solid var(--color-border); border-radius:var(--radius-lg); overflow:hidden;">' +
+      '<div class="checklist-header"><span class="checklist-summary ' + summaryClass + '">Tests Passed: ' + passedCount + '/10</span><button id="btn-reset-tests" class="btn btn--ghost btn--sm">Reset</button></div>' +
+      '<div>' + itemsHtml + '</div>' +
+      '</div>' +
+      '<div style="text-align:center; margin-top:16px;">' + (passedCount === 10 ? '<a href="#/jt/08-ship" class="btn btn--primary">Proceed to Ship ' + icons.rocket + '</a>' : '<p style="color:var(--color-text-secondary);">' + summaryText + '</p>') + '</div>' +
+      '</div>';
+  }
+
+  function renderShip() {
+    app.className = 'route-container route-container--centered';
+    app.innerHTML = '<div class="ship-container"><div class="ship-hero">🚀</div><h1 class="landing-hero__headline">Ready for Liftoff</h1><p class="landing-hero__subtext">All systems are nominal. The Job Notification Tracker is ready to ship.</p><a href="#/dashboard" class="btn btn--primary btn--lg">Return to Mission Control</a></div>';
+  }
+
+  function renderShipLocked() {
+    app.className = 'route-container route-container--centered';
+    app.innerHTML = '<div class="locked-container"><div class="locked-icon">' + icons.lock + '</div><h2 class="state-empty__title">Ship Locked</h2><p class="state-empty__message">You must complete the verification checklist before shipping.</p><a href="#/jt/07-test" class="btn btn--primary" style="margin-top:16px;">Go to Checklist</a></div>';
+  }
+
   /* ── Modal & Navigation ────────────────────────────────── */
   function openModal(job) {
-    // Same modal logic code (omitted for brevity, assume present)
     modalRoot.innerHTML = '<div class="modal-overlay" id="modal-overlay"><div class="modal"><div class="modal__header"><h3 class="modal__title">' + job.title + '</h3><button class="modal__close" id="modal-close">' + icons.close + '</button></div><div class="modal__content"><div class="modal__section"><div class="modal__section-title">Company Info</div><p><strong>' + job.company + '</strong> • ' + job.location + ' (' + job.mode + ')</p><p>Posted ' + job.postedDaysAgo + ' days ago via ' + job.source + '</p></div><div class="modal__section"><div class="modal__section-title">Job Description</div><p>' + job.description + '</p></div><div class="modal__section"><div class="modal__section-title">Skills Required</div><div class="job-card__tags">' + job.skills.map(function (s) { return '<span class="badge badge--neutral">' + s + '</span>'; }).join('') + '</div></div><div class="modal__section"><div class="modal__section-title">Details</div><p>Experience: ' + job.experience + '</p><p>Salary: ' + job.salaryRange + '</p></div></div><div class="modal__footer"><button class="btn btn--ghost" id="modal-close-btn">Close</button><a href="' + job.applyUrl + '" target="_blank" class="btn btn--primary">Apply Now ' + icons.external + '</a></div></div></div>';
     document.getElementById('modal-close').onclick = closeModal;
     document.getElementById('modal-close-btn').onclick = closeModal;
@@ -507,11 +540,28 @@
   }
   function closeModal() { modalRoot.innerHTML = ''; document.body.style.overflow = ''; }
 
-  var routes = { '/': { title: 'Home', render: renderLanding }, '/dashboard': { title: 'Dashboard', render: renderDashboard }, '/saved': { title: 'Saved', render: renderSaved }, '/digest': { title: 'Digest', render: renderDigest }, '/settings': { title: 'Settings', render: renderSettings }, '/proof': { title: 'Proof', render: renderProof } };
+  var routes = {
+    '/': { title: 'Home', render: renderLanding },
+    '/dashboard': { title: 'Dashboard', render: renderDashboard },
+    '/saved': { title: 'Saved', render: renderSaved },
+    '/digest': { title: 'Digest', render: renderDigest },
+    '/settings': { title: 'Settings', render: renderSettings },
+    '/proof': { title: 'Proof', render: renderProof },
+    '/jt/07-test': { title: 'Test', render: renderTestChecklist },
+    '/jt/08-ship': { title: 'Ship', render: renderShip }
+  };
 
   function updateActiveLink(hash) { if (!navLinks) return; for (var i = 0; i < navLinks.length; i++) { navLinks[i].classList.toggle('nav__link--active', navLinks[i].getAttribute('data-route') === hash); } }
   function navigate() {
     var hash = window.location.hash.replace('#', '') || '/';
+    // Ship Lock Logic
+    if (hash === '/jt/08-ship') {
+      if (!checkAllTestsPassed()) {
+        renderShipLocked();
+        return;
+      }
+    }
+
     var route = routes[hash];
     if (!route) { window.location.hash = '#/dashboard'; return; }
     if (modalRoot) modalRoot.innerHTML = '';
@@ -530,18 +580,22 @@
     if (target.id === 'btn-generate-digest') { var digest = generateDigest(); if (digest.length === 0) alert('No matches found for today.'); else renderDigest(); }
     if (target.id === 'btn-copy-digest') { var text = getDigestText(loadDigest()); navigator.clipboard.writeText(text).then(function () { alert('Digest copied!'); }); }
     if (target.id === 'btn-email-digest') { var text = getDigestText(loadDigest()); window.open('mailto:?subject=Daily Job Digest&body=' + encodeURIComponent(text)); }
+
+    // Test Actions
+    if (target.classList.contains('checklist-checkbox')) {
+      updateTestStatus(target.id, target.checked);
+    }
+    if (target.id === 'btn-reset-tests') {
+      testStatus = {};
+      localStorage.setItem('jobTrackerTestStatus', JSON.stringify(testStatus));
+      renderTestChecklist();
+    }
   }
 
   function handleAppChange(e) {
     if (e.target.id === 'pref-score') document.getElementById('score-val').textContent = e.target.value + '%';
     if (e.target.classList.contains('filter-bar__select') || e.target.id === 'match-toggle') handleSearchInput();
-
-    // Status Change
-    if (e.target.classList.contains('action-status')) {
-      var id = e.target.getAttribute('data-id');
-      var newStatus = e.target.value;
-      updateJobStatus(id, newStatus, e.target);
-    }
+    if (e.target.classList.contains('action-status')) { var id = e.target.getAttribute('data-id'); var newStatus = e.target.value; updateJobStatus(id, newStatus, e.target); }
   }
 
   function handleAppInput(e) { if (e.target.id === 'search-input') handleSearchInput(); }
