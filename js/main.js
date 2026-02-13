@@ -1,111 +1,111 @@
 /* ============================================================
-   KodNest Premium Build System — Main JavaScript
+   Job Notification Tracker — Router & Navigation
    ============================================================
-   Minimal interactivity for the design system showcase.
-   No frameworks. No dependencies.
+   Hash-based SPA routing. No frameworks. No dependencies.
    ============================================================ */
 
 (function () {
   'use strict';
 
-  /* ── Proof Footer Checkboxes ────────────────────────────── */
+  /* ── Route Configuration ───────────────────────────────── */
 
-  function initProofChecklist() {
-    const items = document.querySelectorAll('.proof-footer__item');
+  var routes = {
+    '/': { title: 'Dashboard', redirect: '/dashboard' },
+    '/dashboard': { title: 'Dashboard' },
+    '/saved': { title: 'Saved' },
+    '/digest': { title: 'Digest' },
+    '/settings': { title: 'Settings' },
+    '/proof': { title: 'Proof' }
+  };
 
-    items.forEach(function (item) {
-      const checkbox = item.querySelector('.checkbox__input');
-      if (!checkbox) return;
+  /* ── DOM References ────────────────────────────────────── */
 
-      checkbox.addEventListener('change', function () {
-        if (this.checked) {
-          item.classList.add('proof-footer__item--checked');
-        } else {
-          item.classList.remove('proof-footer__item--checked');
-        }
-        updateProofProgress();
-      });
-    });
+  var app;
+  var navLinks;
+  var hamburger;
+  var navLinksContainer;
+
+  /* ── Render Page ────────────────────────────────────────── */
+
+  function renderPage(title) {
+    app.innerHTML =
+      '<div class="route-page">' +
+      '<h1 class="route-page__heading">' + title + '</h1>' +
+      '<p class="route-page__subtext">This section will be built in the next step.</p>' +
+      '</div>';
+
+    document.title = title + ' — Job Notification Tracker';
   }
 
-  function updateProofProgress() {
-    const total = document.querySelectorAll('.proof-footer .checkbox__input').length;
-    const checked = document.querySelectorAll('.proof-footer .checkbox__input:checked').length;
-    const counter = document.getElementById('proof-counter');
-    if (counter) {
-      counter.textContent = checked + ' / ' + total + ' verified';
+  /* ── Update Active Link ────────────────────────────────── */
+
+  function updateActiveLink(currentRoute) {
+    for (var i = 0; i < navLinks.length; i++) {
+      var link = navLinks[i];
+      if (link.getAttribute('data-route') === currentRoute) {
+        link.classList.add('nav__link--active');
+      } else {
+        link.classList.remove('nav__link--active');
+      }
     }
   }
 
-  /* ── Copy to Clipboard ─────────────────────────────────── */
+  /* ── Router ────────────────────────────────────────────── */
 
-  function initCopyButtons() {
-    const copyButtons = document.querySelectorAll('[data-copy-target]');
+  function navigate() {
+    var hash = window.location.hash.replace('#', '') || '/';
+    var route = routes[hash];
 
-    copyButtons.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var targetId = this.getAttribute('data-copy-target');
-        var target = document.getElementById(targetId);
-        if (!target) return;
+    /* Unknown route → default to dashboard */
+    if (!route) {
+      window.location.hash = '#/dashboard';
+      return;
+    }
 
-        var text = target.textContent || target.innerText;
+    /* Handle redirect (e.g. / → /dashboard) */
+    if (route.redirect) {
+      window.location.hash = '#' + route.redirect;
+      return;
+    }
 
-        navigator.clipboard.writeText(text).then(function () {
-          var originalText = btn.textContent;
-          btn.textContent = 'Copied';
-          btn.classList.add('btn--success-flash');
-          setTimeout(function () {
-            btn.textContent = originalText;
-            btn.classList.remove('btn--success-flash');
-          }, 1500);
-        }).catch(function () {
-          /* Fallback for older browsers */
-          var textarea = document.createElement('textarea');
-          textarea.value = text;
-          textarea.style.position = 'fixed';
-          textarea.style.opacity = '0';
-          document.body.appendChild(textarea);
-          textarea.select();
-          document.execCommand('copy');
-          document.body.removeChild(textarea);
+    renderPage(route.title);
+    updateActiveLink(hash);
 
-          var originalText = btn.textContent;
-          btn.textContent = 'Copied';
-          setTimeout(function () {
-            btn.textContent = originalText;
-          }, 1500);
-        });
-      });
+    /* Close mobile menu after navigation */
+    if (navLinksContainer) {
+      navLinksContainer.classList.remove('nav__links--open');
+      hamburger.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  /* ── Hamburger Toggle ──────────────────────────────────── */
+
+  function initHamburger() {
+    hamburger = document.getElementById('nav-hamburger');
+    navLinksContainer = document.getElementById('nav-links');
+
+    if (!hamburger || !navLinksContainer) return;
+
+    hamburger.addEventListener('click', function () {
+      var isOpen = navLinksContainer.classList.toggle('nav__links--open');
+      hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      hamburger.classList.toggle('nav__hamburger--active', isOpen);
     });
   }
 
-  /* ── Status Badge Cycling (Demo) ────────────────────────── */
-
-  function initStatusDemo() {
-    var badge = document.getElementById('status-badge');
-    if (!badge) return;
-
-    var states = [
-      { text: 'Not Started', className: 'badge--neutral' },
-      { text: 'In Progress', className: 'badge--active'  },
-      { text: 'Shipped',     className: 'badge--success' }
-    ];
-
-    var current = 0;
-
-    badge.addEventListener('click', function () {
-      current = (current + 1) % states.length;
-      badge.textContent = states[current].text;
-      badge.className = 'badge ' + states[current].className;
-    });
-  }
-
-  /* ── Initialize ─────────────────────────────────────────── */
+  /* ── Initialize ────────────────────────────────────────── */
 
   document.addEventListener('DOMContentLoaded', function () {
-    initProofChecklist();
-    initCopyButtons();
-    initStatusDemo();
+    app = document.getElementById('app');
+    navLinks = document.querySelectorAll('.nav__link');
+
+    initHamburger();
+
+    /* Listen for hash changes */
+    window.addEventListener('hashchange', navigate);
+
+    /* Initial route */
+    navigate();
   });
 
 })();

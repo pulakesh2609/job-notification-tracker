@@ -1,7 +1,8 @@
 /* ============================================================
    KodNest Premium Build System — Layout System
    ============================================================
-   Structure: Top Bar → Context Header → Workspace + Panel → Proof Footer
+   Structure: App Nav → Route Content
+   Original showcase layout rules preserved below.
    ============================================================ */
 
 /* ── Page Shell ──────────────────────────────────────────── */
@@ -11,6 +12,146 @@
     flex-direction: column;
     min-height: 100vh;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   APP NAVIGATION
+   ═══════════════════════════════════════════════════════════ */
+
+.app-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-5);
+    height: var(--topbar-height);
+    padding: 0 var(--sp-4);
+    background-color: var(--color-surface);
+    border-bottom: var(--border-width) solid var(--color-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.nav__brand {
+    font-family: var(--font-heading);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    letter-spacing: var(--tracking-wide);
+    color: var(--color-text);
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.nav__brand:hover {
+    color: var(--color-text);
+}
+
+.nav__links {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav__link {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    padding: 18px 0;
+    border-bottom: 2px solid transparent;
+    transition: color var(--transition-fast), border-color var(--transition-fast);
+    letter-spacing: var(--tracking-wide);
+}
+
+.nav__link:hover {
+    color: var(--color-text);
+}
+
+.nav__link--active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+    font-weight: 600;
+}
+
+/* ── Hamburger (hidden on desktop) ───────────────────────── */
+
+.nav__hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 110;
+}
+
+.nav__hamburger-line {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background-color: var(--color-text);
+    border-radius: 2px;
+    transition: transform var(--transition-normal), opacity var(--transition-normal);
+}
+
+/* Hamburger → X animation */
+.nav__hamburger--active .nav__hamburger-line:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+
+.nav__hamburger--active .nav__hamburger-line:nth-child(2) {
+    opacity: 0;
+}
+
+.nav__hamburger--active .nav__hamburger-line:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ROUTE CONTENT AREA
+   ═══════════════════════════════════════════════════════════ */
+
+.route-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-bg);
+}
+
+.route-page {
+    text-align: center;
+    padding: var(--sp-5) var(--sp-4);
+    max-width: 640px;
+}
+
+.route-page__heading {
+    font-family: var(--font-heading);
+    font-size: var(--text-3xl);
+    font-weight: 700;
+    letter-spacing: var(--tracking-wide);
+    color: var(--color-text);
+    margin-bottom: var(--sp-2);
+}
+
+.route-page__subtext {
+    font-family: var(--font-body);
+    font-size: var(--text-md);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-normal);
+    max-width: var(--measure);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ORIGINAL SHOWCASE LAYOUT (preserved)
+   ═══════════════════════════════════════════════════════════ */
 
 /* ── Top Bar ─────────────────────────────────────────────── */
 
@@ -161,7 +302,56 @@
     color: var(--color-success);
 }
 
-/* ── Responsive ──────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Mobile Navigation (≤ 768px) ─────────────────────────── */
+
+@media (max-width: 768px) {
+    .nav__hamburger {
+        display: flex;
+    }
+
+    .nav__links {
+        /* Hidden by default on mobile */
+        display: none;
+        position: absolute;
+        top: var(--topbar-height);
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        gap: 0;
+        background-color: var(--color-surface);
+        border-bottom: var(--border-width) solid var(--color-border);
+        padding: var(--sp-1) 0;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+        z-index: 99;
+    }
+
+    .nav__links--open {
+        display: flex;
+    }
+
+    .nav__link {
+        padding: var(--sp-2) var(--sp-4);
+        border-bottom: none;
+        width: 100%;
+    }
+
+    .nav__link--active {
+        background-color: var(--color-bg);
+        border-bottom: none;
+        border-left: 3px solid var(--color-accent);
+        padding-left: calc(var(--sp-4) - 3px);
+    }
+
+    .route-page__heading {
+        font-size: var(--text-2xl);
+    }
+}
+
+/* ── Showcase Responsive (preserved) ─────────────────────── */
 
 @media (max-width: 960px) {
     .main-content {
