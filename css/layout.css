@@ -121,32 +121,89 @@
 .route-container {
     flex: 1;
     display: flex;
-    align-items: center;
-    justify-content: center;
     background-color: var(--color-bg);
 }
 
-.route-page {
-    text-align: center;
-    padding: var(--sp-5) var(--sp-4);
-    max-width: 640px;
+/* Centered variant — used for landing hero */
+.route-container--centered {
+    align-items: center;
+    justify-content: center;
 }
 
-.route-page__heading {
+/* Top-aligned variant — used for inner pages */
+.route-container--top {
+    align-items: flex-start;
+    justify-content: center;
+}
+
+/* ── Landing Hero ───────────────────────────────────────── */
+
+.landing-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--sp-5) var(--sp-4);
+    max-width: 700px;
+}
+
+.landing-hero__headline {
     font-family: var(--font-heading);
-    font-size: var(--text-3xl);
+    font-size: 52px;
     font-weight: 700;
     letter-spacing: var(--tracking-wide);
     color: var(--color-text);
     margin-bottom: var(--sp-2);
+    line-height: 1.15;
 }
 
-.route-page__subtext {
+.landing-hero__subtext {
     font-family: var(--font-body);
     font-size: var(--text-md);
     color: var(--color-text-secondary);
     line-height: var(--leading-normal);
     max-width: var(--measure);
+    margin-bottom: var(--sp-4);
+}
+
+.landing-hero__cta {
+    font-size: var(--text-base);
+    padding: 14px 36px;
+}
+
+/* ── Page Section (inner page wrapper) ──────────────────── */
+
+.page-section {
+    width: 100%;
+    max-width: 720px;
+    padding: var(--sp-5) var(--sp-4);
+}
+
+.page-section__header {
+    margin-bottom: var(--sp-4);
+}
+
+.page-section__title {
+    font-family: var(--font-heading);
+    font-size: var(--text-2xl);
+    font-weight: 700;
+    letter-spacing: var(--tracking-wide);
+    color: var(--color-text);
+    margin-bottom: var(--sp-1);
+}
+
+.page-section__desc {
+    font-family: var(--font-body);
+    font-size: var(--text-md);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-normal);
+}
+
+/* ── Settings Form Card ─────────────────────────────────── */
+
+.settings-form {
+    padding: var(--sp-4);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -346,8 +403,12 @@
         padding-left: calc(var(--sp-4) - 3px);
     }
 
-    .route-page__heading {
+    .landing-hero__headline {
         font-size: var(--text-2xl);
+    }
+
+    .page-section__title {
+        font-size: var(--text-xl);
     }
 }
 
