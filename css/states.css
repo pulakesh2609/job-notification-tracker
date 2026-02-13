@@ -1,0 +1,175 @@
+/* ============================================================
+   KodNest Premium Build System — Error, Empty & Interaction States
+   ============================================================ */
+
+/* ── Error State ─────────────────────────────────────────── */
+
+.state-error {
+    background-color: var(--color-error-bg);
+    border: var(--border-width) solid var(--color-border);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    padding: var(--sp-3);
+}
+
+.state-error__title {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--color-accent);
+    margin-bottom: var(--sp-1);
+}
+
+.state-error__message {
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    line-height: var(--leading-normal);
+    margin-bottom: var(--sp-2);
+}
+
+.state-error__fix {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-normal);
+    padding: var(--sp-2);
+    background-color: var(--color-surface);
+    border-radius: var(--radius-sm);
+    border: var(--border-width) solid var(--color-border);
+}
+
+.state-error__fix strong {
+    color: var(--color-text);
+}
+
+/* ── Warning State ───────────────────────────────────────── */
+
+.state-warning {
+    background-color: var(--color-warning-bg);
+    border: var(--border-width) solid var(--color-border);
+    border-left: 3px solid var(--color-warning);
+    border-radius: var(--radius-md);
+    padding: var(--sp-3);
+}
+
+.state-warning__title {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--color-warning);
+    margin-bottom: var(--sp-1);
+}
+
+.state-warning__message {
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    line-height: var(--leading-normal);
+}
+
+/* ── Success State ───────────────────────────────────────── */
+
+.state-success {
+    background-color: var(--color-success-bg);
+    border: var(--border-width) solid var(--color-border);
+    border-left: 3px solid var(--color-success);
+    border-radius: var(--radius-md);
+    padding: var(--sp-3);
+}
+
+.state-success__title {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--color-success);
+    margin-bottom: var(--sp-1);
+}
+
+.state-success__message {
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    line-height: var(--leading-normal);
+}
+
+/* ── Empty State ─────────────────────────────────────────── */
+
+.state-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--sp-5) var(--sp-4);
+    border: var(--border-width) dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-surface);
+}
+
+.state-empty__icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--sp-3);
+    color: var(--color-text-secondary);
+    opacity: 0.4;
+}
+
+.state-empty__title {
+    font-family: var(--font-heading);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: var(--sp-1);
+}
+
+.state-empty__message {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-normal);
+    max-width: 360px;
+    margin-bottom: var(--sp-3);
+}
+
+/* ── Focus & Active States ───────────────────────────────── */
+
+*:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+/* ── Interactive Transitions ─────────────────────────────── */
+
+button,
+a,
+input,
+textarea,
+select,
+[role="button"] {
+    transition: all var(--transition-normal);
+}
+
+/* ── Skeleton Loading ────────────────────────────────────── */
+
+.skeleton {
+    background-color: var(--color-border);
+    border-radius: var(--radius-sm);
+    opacity: 0.5;
+}
+
+.skeleton--text {
+    height: 16px;
+    margin-bottom: var(--sp-1);
+}
+
+.skeleton--text:last-child {
+    width: 60%;
+}
+
+.skeleton--heading {
+    height: 28px;
+    width: 50%;
+    margin-bottom: var(--sp-2);
+}
+
+.skeleton--card {
+    height: 120px;
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--sp-2);
+}
