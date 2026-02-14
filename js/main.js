@@ -540,16 +540,165 @@
   }
   function closeModal() { modalRoot.innerHTML = ''; document.body.style.overflow = ''; }
 
+  /* ── Proof Logic ───────────────────────────────────────── */
+
+  var proofLinks = { lovable: '', github: '', deploy: '' };
+
+  function loadProofLinks() {
+    try {
+      proofLinks.lovable = localStorage.getItem('jt_proof_lovable') || '';
+      proofLinks.github = localStorage.getItem('jt_proof_github') || '';
+      proofLinks.deploy = localStorage.getItem('jt_proof_deploy') || '';
+    } catch (e) { }
+  }
+
+  function saveProofLinks() {
+    localStorage.setItem('jt_proof_lovable', proofLinks.lovable);
+    localStorage.setItem('jt_proof_github', proofLinks.github);
+    localStorage.setItem('jt_proof_deploy', proofLinks.deploy);
+    renderProof();
+  }
+
+  function checkIsShipped() {
+    // Validate URLs
+    var isUrl = function (s) { return s && s.startsWith('http'); };
+    return isUrl(proofLinks.lovable) && isUrl(proofLinks.github) && isUrl(proofLinks.deploy) && checkAllTestsPassed();
+  }
+
+  function getProofStatus() {
+    if (checkIsShipped()) return 'Shipped';
+    if (proofLinks.lovable || proofLinks.github || proofLinks.deploy || Object.values(testStatus).some(Boolean)) return 'In Progress';
+    return 'Not Started';
+  }
+
+  function getSubmissionText() {
+    return "Job Notification Tracker — Final Submission\n\n" +
+      "Lovable Project: " + proofLinks.lovable + "\n" +
+      "GitHub Repository: " + proofLinks.github + "\n" +
+      "Live Deployment: " + proofLinks.deploy + "\n\n" +
+      "Core Features:\n" +
+      "- Intelligent match scoring\n" +
+      "- Daily digest simulation\n" +
+      "- Status tracking\n" +
+      "- Test checklist enforced";
+  }
+
+  function renderProof() {
+    app.className = 'route-container route-container--top bg-gray-50 min-h-screen p-8';
+    loadProofLinks();
+    var status = getProofStatus();
+
+    // Status Badge Logic
+    var statusBadgeClass = 'bg-gray-100 text-gray-600';
+    if (status === 'In Progress') statusBadgeClass = 'bg-blue-100 text-blue-700';
+    if (status === 'Shipped') statusBadgeClass = 'bg-emerald-100 text-emerald-700';
+
+    var steps = [
+      { label: 'Search & Filter', done: true },
+      { label: 'Save Jobs', done: savedJobs.size > 0 },
+      { label: 'User Preferences', done: preferences.roleKeywords.length > 0 },
+      { label: 'Match Scoring', done: true },
+      { label: 'Daily Digest', done: localStorage.getItem('jobTrackerDigest_' + getTodayDateString()) },
+      { label: 'Status Tracking', done: Object.keys(jobStatuses).length > 0 },
+      { label: 'Test Checklist', done: checkAllTestsPassed() },
+      { label: 'Final Review', done: checkIsShipped() }
+    ];
+
+    var stepsHtml = steps.map(function (s, i) {
+      var icon = s.done
+        ? '<span class="text-green-500">' + icons.check + '</span>'
+        : '<span class="text-gray-300">○</span>';
+      var textClass = s.done ? 'text-gray-900 font-medium' : 'text-gray-400';
+      return (
+        '<li class="flex items-center gap-3 py-3 border-b border-gray-50 last:border-0">' +
+        icon +
+        '<span class="' + textClass + ' text-sm">Step ' + (i + 1) + ': ' + s.label + '</span>' +
+        '</li>'
+      );
+    }).join('');
+
+    app.innerHTML =
+      // 1. Header Area
+      '<header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">' +
+      '<div>' +
+      '<h1 class="text-2xl font-bold text-gray-900 tracking-tight">Proof <span class="text-gray-400 font-normal">/ Submission</span></h1>' +
+      '<p class="text-gray-500 mt-1 text-sm">Validating core functionality before launch.</p>' +
+      '</div>' +
+      '<div class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider ' + statusBadgeClass + '">' + status + '</div>' +
+      '</header>' +
+
+      // 2. Main Grid Layout
+      '<div class="grid grid-cols-1 md:grid-cols-3 gap-8">' +
+
+      // 3. Left Column: Step Summary Card
+      '<div class="md:col-span-1 space-y-6">' +
+      '<div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">' +
+      '<h3 class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-6">Progress Validation</h3>' +
+      '<ul>' + stepsHtml + '</ul>' +
+      '</div>' +
+
+      (status === 'Shipped'
+        ? '<div class="bg-emerald-50 rounded-xl p-6 border border-emerald-100 text-center">' +
+        '<div class="text-4xl mb-2">🚀</div>' +
+        '<h3 class="text-emerald-900 font-bold">Ready for Launch</h3>' +
+        '<p class="text-emerald-700 text-sm mt-1">All systems nominal.</p>' +
+        '</div>'
+        : '') +
+      '</div>' +
+
+      // 4. Right Column: Artifact Inputs Card
+      '<div class="md:col-span-2">' +
+      '<div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">' +
+      '<h3 class="text-xl font-bold text-gray-900 mb-6">Artifact Submission</h3>' +
+      '<div class="space-y-6">' +
+
+      // Lovable Link
+      '<div class="group">' +
+      '<label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Lovable Project Link</label>' +
+      '<input class="proof-input w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent block p-3 transition-all duration-200 hover:bg-white" ' +
+      'id="proof-lovable" placeholder="https://lovable.dev/..." value="' + proofLinks.lovable + '">' +
+      '</div>' +
+
+      // GitHub Link
+      '<div class="group">' +
+      '<label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">GitHub Repository</label>' +
+      '<input class="proof-input w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent block p-3 transition-all duration-200 hover:bg-white" ' +
+      'id="proof-github" placeholder="https://github.com/..." value="' + proofLinks.github + '">' +
+      '</div>' +
+
+      // Deploy Link
+      '<div class="group">' +
+      '<label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Live Deployment</label>' +
+      '<input class="proof-input w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent block p-3 transition-all duration-200 hover:bg-white" ' +
+      'id="proof-deploy" placeholder="https://vercel.com/..." value="' + proofLinks.deploy + '">' +
+      '</div>' +
+
+      // 5. Copy Button
+      '<div class="pt-6">' +
+      '<button id="btn-copy-submission" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-4 px-6 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 flex justify-center items-center gap-2">' +
+      icons.copy + ' Copy Final Submission' +
+      '</button>' +
+      '<p class="text-center text-xs text-gray-400 mt-3">Copied text is formatted for direct submission.</p>' +
+      '</div>' +
+
+      '</div>' +
+      '</div>' +
+      '</div>' +
+
+      '</div>';
+  }
+
   var routes = {
     '/': { title: 'Home', render: renderLanding },
     '/dashboard': { title: 'Dashboard', render: renderDashboard },
     '/saved': { title: 'Saved', render: renderSaved },
     '/digest': { title: 'Digest', render: renderDigest },
     '/settings': { title: 'Settings', render: renderSettings },
-    '/proof': { title: 'Proof', render: renderProof },
+    '/jt/proof': { title: 'Proof', render: renderProof },
     '/jt/07-test': { title: 'Test', render: renderTestChecklist },
     '/jt/08-ship': { title: 'Ship', render: renderShip }
   };
+
 
   function updateActiveLink(hash) { if (!navLinks) return; for (var i = 0; i < navLinks.length; i++) { navLinks[i].classList.toggle('nav__link--active', navLinks[i].getAttribute('data-route') === hash); } }
   function navigate() {
@@ -581,6 +730,12 @@
     if (target.id === 'btn-copy-digest') { var text = getDigestText(loadDigest()); navigator.clipboard.writeText(text).then(function () { alert('Digest copied!'); }); }
     if (target.id === 'btn-email-digest') { var text = getDigestText(loadDigest()); window.open('mailto:?subject=Daily Job Digest&body=' + encodeURIComponent(text)); }
 
+    // Proof Actions
+    if (target.id === 'btn-copy-submission') {
+      var text = getSubmissionText();
+      navigator.clipboard.writeText(text).then(function () { alert('Submission copied to clipboard!'); });
+    }
+
     // Test Actions
     if (target.classList.contains('checklist-checkbox')) {
       updateTestStatus(target.id, target.checked);
@@ -596,6 +751,15 @@
     if (e.target.id === 'pref-score') document.getElementById('score-val').textContent = e.target.value + '%';
     if (e.target.classList.contains('filter-bar__select') || e.target.id === 'match-toggle') handleSearchInput();
     if (e.target.classList.contains('action-status')) { var id = e.target.getAttribute('data-id'); var newStatus = e.target.value; updateJobStatus(id, newStatus, e.target); }
+
+    // Proof Inputs
+    if (e.target.classList.contains('proof-input')) {
+      var id = e.target.id.replace('proof-', '');
+      if (proofLinks.hasOwnProperty(id)) {
+        proofLinks[id] = e.target.value.trim();
+        saveProofLinks();
+      }
+    }
   }
 
   function handleAppInput(e) { if (e.target.id === 'search-input') handleSearchInput(); }

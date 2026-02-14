@@ -907,7 +907,146 @@
     margin: 0 auto;
 }
 
-.ship-hero {
-    font-size: 64px;
+/* ── Proof Page ──────────────────────────────────────────── */
+
+.proof-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: var(--sp-6);
+}
+
+.proof-grid {
+    display: grid;
+    gap: var(--sp-6);
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .proof-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.proof-card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--sp-6);
+    height: 100%;
+}
+
+.proof-section-title {
+    font-size: var(--text-base);
+    font-weight: 700;
     margin-bottom: var(--sp-4);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-primary);
+}
+
+.proof-step {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-3) 0;
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.proof-step:last-child {
+    border-bottom: none;
+}
+
+.proof-step-label {
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.proof-step-status {
+    font-weight: 600;
+}
+
+.proof-step-status--pending {
+    color: var(--color-text-tertiary);
+}
+
+.proof-step-status--done {
+    color: #166534;
+}
+
+.proof-input-group {
+    margin-bottom: var(--sp-4);
+}
+
+.proof-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    transition: all 0.2s;
+}
+
+.proof-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    line-height: 1.5;
+}
+
+.status-badge--not-started {
+    background-color: var(--color-bg);
+    color: var(--color-text-tertiary);
+    border: 1px solid var(--color-border);
+}
+
+.status-badge--in-progress {
+    background-color: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+}
+
+.status-badge--shipped {
+    background-color: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #86efac;
+}
+
+.shipped-message {
+    text-align: center;
+    margin-top: var(--sp-6);
+    padding: var(--sp-4);
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: var(--radius-md);
+    color: #15803d;
+    font-weight: 600;
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
