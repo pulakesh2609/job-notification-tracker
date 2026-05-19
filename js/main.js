@@ -15,6 +15,11 @@
   var savedJobs = new Set();
   var jobStatuses = {};
   var testStatus = {}; // { 'id': boolean }
+  var authToken = localStorage.getItem('jwt_token') || null;
+
+  function isAuthenticated() {
+    return !!authToken;
+  }
 
   // Search State
   var currentFilters = {
@@ -688,8 +693,149 @@
       '</div>';
   }
 
+  function renderLogin() {
+    app.className = 'route-container route-container--centered';
+    app.innerHTML = 
+      '<div class="card" style="width: 100%; max-width: 400px; padding: 32px;">' +
+        '<h2 style="font-size: var(--text-xl); font-weight: 700; margin-bottom: 24px; text-align: center;" id="auth-title">Login / Register</h2>' +
+        '<div id="auth-error" style="display: none; background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;"></div>' +
+        
+        '<form id="auth-step1" style="display: flex; flex-direction: column; gap: 16px;">' +
+          '<a id="btn-google-login" href="#" class="btn btn--ghost btn--block" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 8px; border: 1px solid var(--color-border);">' +
+            '<img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google Logo" style="width: 20px; height: 20px;">' +
+            'Sign in with Google' +
+          '</a>' +
+          '<div style="text-align: center; color: var(--color-text-secondary); font-size: 14px; margin: 8px 0;">— OR —</div>' +
+          '<div class="field">' +
+            '<label class="label">Email or Phone Number</label>' +
+            '<input type="text" id="auth-identifier" class="input" placeholder="user@example.com or 1234567890" required>' +
+          '</div>' +
+          '<button type="submit" id="btn-send-otp" class="btn btn--primary btn--block" style="margin-top: 16px;">Send OTP</button>' +
+        '</form>' +
+        
+        '<form id="auth-step2" style="display: none; flex-direction: column; gap: 16px;">' +
+          '<div class="field">' +
+            '<label class="label">Enter 6-Digit OTP</label>' +
+            '<input type="text" id="auth-otp" class="input" placeholder="••••••" maxlength="6" required style="text-align: center; letter-spacing: 0.5em; font-size: 20px;">' +
+          '</div>' +
+          '<button type="submit" id="btn-verify-otp" class="btn btn--primary btn--block" style="margin-top: 16px;">Verify & Login</button>' +
+          '<button type="button" id="btn-back" class="btn btn--ghost btn--block" style="margin-top: 8px;">Back to Start</button>' +
+        '</form>' +
+      '</div>';
+
+    document.title = 'Login — Job Notification Tracker';
+
+    var step1Form = document.getElementById('auth-step1');
+    var step2Form = document.getElementById('auth-step2');
+    var btnBack = document.getElementById('btn-back');
+    var errorDiv = document.getElementById('auth-error');
+    var title = document.getElementById('auth-title');
+
+    // Dynamic Google OAuth URL
+    var googleBtn = document.getElementById('btn-google-login');
+    if (googleBtn) {
+      var backendBase = window.location.hostname.includes('vercel.app') 
+                        ? 'https://your-backend-url.onrender.com' 
+                        : 'http://localhost:8080';
+      googleBtn.href = backendBase + '/oauth2/authorization/google';
+    }
+
+    // Handle OAuth2 Redirect Token extraction
+    var urlParams = new URLSearchParams(window.location.search);
+    var tokenFromHash = window.location.hash.split('?token=')[1];
+    var token = urlParams.get('token') || tokenFromHash;
+
+    if (token) {
+      authToken = token;
+      localStorage.setItem('jwt_token', authToken);
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname + '#/dashboard');
+      window.location.hash = '#/dashboard';
+      return;
+    }
+
+    function showError(msg) {
+      errorDiv.style.display = 'block';
+      errorDiv.innerText = msg;
+    }
+    function hideError() {
+      errorDiv.style.display = 'none';
+    }
+
+    step1Form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      hideError();
+      var identifier = document.getElementById('auth-identifier').value;
+      var btnSend = document.getElementById('btn-send-otp');
+      // Use absolute production URL if on vercel, otherwise localhost
+      var apiUrl = window.location.hostname.includes('vercel.app') 
+                   ? 'https://your-backend-url.onrender.com' 
+                   : 'http://localhost:8080';
+
+      fetch(apiUrl + '/api/auth/send-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier: identifier }) })
+      .then(function(res) { 
+        if (!res.ok) throw new Error('Failed to connect to backend.');
+        return res.json(); 
+      })
+      .then(function(data) {
+         btnSend.innerText = 'Send OTP';
+         btnSend.disabled = false;
+         step1Form.style.display = 'none';
+         step2Form.style.display = 'flex';
+         title.innerText = 'Verify Identity';
+         if (data.mockOtpCode) {
+           alert('[MOCK EMAIL/SMS SYSTEM]\n\nYour OTP is: ' + data.mockOtpCode);
+         }
+      })
+      .catch(function(err) {
+         btnSend.innerText = 'Send OTP';
+         btnSend.disabled = false;
+         showError('Could not reach the server. Is the Java backend running on port 8080?');
+      });
+    });
+
+    step2Form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      hideError();
+      var identifier = document.getElementById('auth-identifier').value;
+      var otp = document.getElementById('auth-otp').value;
+      var btnVerify = document.getElementById('btn-verify-otp');
+      // Use absolute production URL if on vercel, otherwise localhost
+      var apiUrl = window.location.hostname.includes('vercel.app') 
+                   ? 'https://your-backend-url.onrender.com' 
+                   : 'http://localhost:8080';
+
+      fetch(apiUrl + '/api/auth/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier: identifier, otpCode: otp }) })
+      .then(function(res) { 
+        if (!res.ok) throw new Error('Invalid OTP');
+        return res.json(); 
+      })
+      .then(function(data) {
+         btnVerify.innerText = 'Verify & Login';
+         btnVerify.disabled = false;
+         authToken = data.token;
+         localStorage.setItem('jwt_token', authToken);
+         window.location.hash = '#/dashboard';
+      })
+      .catch(function(err) {
+         btnVerify.innerText = 'Verify & Login';
+         btnVerify.disabled = false;
+         showError('Invalid or expired OTP. Please try again.');
+      });
+    });
+
+    btnBack.addEventListener('click', function() {
+      hideError();
+      step2Form.style.display = 'none';
+      step1Form.style.display = 'flex';
+      title.innerText = 'Login / Register';
+      document.getElementById('auth-otp').value = '';
+    });
+  }
+
   var routes = {
     '/': { title: 'Home', render: renderLanding },
+    '/login': { title: 'Login', render: renderLogin },
     '/dashboard': { title: 'Dashboard', render: renderDashboard },
     '/saved': { title: 'Saved', render: renderSaved },
     '/digest': { title: 'Digest', render: renderDigest },
@@ -703,6 +849,25 @@
   function updateActiveLink(hash) { if (!navLinks) return; for (var i = 0; i < navLinks.length; i++) { navLinks[i].classList.toggle('nav__link--active', navLinks[i].getAttribute('data-route') === hash); } }
   function navigate() {
     var hash = window.location.hash.replace('#', '') || '/';
+    
+    if (hash === '/logout') {
+      localStorage.removeItem('jwt_token');
+      authToken = null;
+      window.location.hash = '#/login';
+      return;
+    }
+
+    var protectedRoutes = ['/dashboard', '/saved', '/digest', '/settings', '/jt/proof', '/jt/07-test', '/jt/08-ship'];
+    if (protectedRoutes.indexOf(hash) !== -1 && !isAuthenticated()) {
+      window.location.hash = '#/login';
+      return;
+    }
+
+    var logoutItem = document.getElementById('nav-logout-item');
+    if (logoutItem) {
+      logoutItem.style.display = isAuthenticated() ? 'block' : 'none';
+    }
+
     // Ship Lock Logic
     if (hash === '/jt/08-ship') {
       if (!checkAllTestsPassed()) {

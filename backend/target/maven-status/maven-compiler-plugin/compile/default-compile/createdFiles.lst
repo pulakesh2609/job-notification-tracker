@@ -1,0 +1,11 @@
+com\example\jobtracker\entity\OtpRecord.class
+com\example\jobtracker\JobtrackerApplication.class
+com\example\jobtracker\security\SecurityConfig.class
+com\example\jobtracker\repository\OtpRepository.class
+com\example\jobtracker\security\OAuth2LoginSuccessHandler.class
+com\example\jobtracker\service\NotificationService.class
+com\example\jobtracker\controller\AuthController.class
+com\example\jobtracker\entity\User.class
+com\example\jobtracker\security\JwtAuthenticationFilter.class
+com\example\jobtracker\security\JwtUtil.class
+com\example\jobtracker\repository\UserRepository.class

@@ -1,0 +1,11 @@
+C:\Project\Job-Notification\backend\src\main\java\com\example\jobtracker\security\JwtUtil.java
+C:\Project\Job-Notification\backend\src\main\java\com\example\jobtracker\entity\User.java
+C:\Project\Job-Notification\backend\src\main\java\com\example\jobtracker\repository\UserRepository.java
+C:\Project\Job-Notification\backend\src\main\java\com\example\jobtracker\security\OAuth2LoginSuccessHandler.java
+C:\Project\Job-Notification\backend\src\main\java\com\example\jobtracker\security\SecurityConfig.java
+C:\Project\Job-Notification\backend\src\main\java\com\example\jobtracker\service\NotificationService.java
+C:\Project\Job-Notification\backend\src\main\java\com\example\jobtracker\repository\OtpRepository.java
+C:\Project\Job-Notification\backend\src\main\java\com\example\jobtracker\security\JwtAuthenticationFilter.java
+C:\Project\Job-Notification\backend\src\main\java\com\example\jobtracker\controller\AuthController.java
+C:\Project\Job-Notification\backend\src\main\java\com\example\jobtracker\entity\OtpRecord.java
+C:\Project\Job-Notification\backend\src\main\java\com\example\jobtracker\JobtrackerApplication.java
