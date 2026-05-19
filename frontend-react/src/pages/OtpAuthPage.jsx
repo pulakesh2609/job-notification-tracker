@@ -28,7 +28,7 @@ const OtpAuthPage = () => {
 
     try {
       const apiUrl = window.location.hostname.includes('vercel.app') 
-                   ? 'https://your-backend-url.onrender.com' 
+                   ? 'https://job-notification-tracker-1.onrender.com' 
                    : 'http://localhost:8080';
 
       const response = await fetch(`${apiUrl}/api/auth/send-otp`, {
@@ -61,7 +61,7 @@ const OtpAuthPage = () => {
 
     try {
       const apiUrl = window.location.hostname.includes('vercel.app') 
-                   ? 'https://your-backend-url.onrender.com' 
+                   ? 'https://job-notification-tracker-1.onrender.com' 
                    : 'http://localhost:8080';
 
       const response = await fetch(`${apiUrl}/api/auth/verify-otp`, {
@@ -101,7 +101,7 @@ const OtpAuthPage = () => {
         {step === 1 ? (
           <form onSubmit={handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <a 
-              href={window.location.hostname.includes('vercel.app') ? 'https://your-backend-url.onrender.com/oauth2/authorization/google' : 'http://localhost:8080/oauth2/authorization/google'} 
+              href={window.location.hostname.includes('vercel.app') ? 'https://job-notification-tracker-1.onrender.com/oauth2/authorization/google' : 'http://localhost:8080/oauth2/authorization/google'} 
               className="btn btn--ghost btn--block" 
               style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginBottom: '8px', border: '1px solid var(--color-border)', textDecoration: 'none' }}
             >

@@ -735,7 +735,7 @@
     var googleBtn = document.getElementById('btn-google-login');
     if (googleBtn) {
       var backendBase = window.location.hostname.includes('vercel.app') 
-                        ? 'https://your-backend-url.onrender.com' 
+                        ? 'https://job-notification-tracker-1.onrender.com' 
                         : 'http://localhost:8080';
       googleBtn.href = backendBase + '/oauth2/authorization/google';
     }
