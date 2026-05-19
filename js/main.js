@@ -769,7 +769,7 @@
       var btnSend = document.getElementById('btn-send-otp');
       // Use absolute production URL if on vercel, otherwise localhost
       var apiUrl = window.location.hostname.includes('vercel.app') 
-                   ? 'https://your-backend-url.onrender.com' 
+                   ? 'https://job-notification-tracker-1.onrender.com' 
                    : 'http://localhost:8080';
 
       fetch(apiUrl + '/api/auth/send-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier: identifier }) })
@@ -802,7 +802,7 @@
       var btnVerify = document.getElementById('btn-verify-otp');
       // Use absolute production URL if on vercel, otherwise localhost
       var apiUrl = window.location.hostname.includes('vercel.app') 
-                   ? 'https://your-backend-url.onrender.com' 
+                   ? 'https://job-notification-tracker-1.onrender.com' 
                    : 'http://localhost:8080';
 
       fetch(apiUrl + '/api/auth/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier: identifier, otpCode: otp }) })
